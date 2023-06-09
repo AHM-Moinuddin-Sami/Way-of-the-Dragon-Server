@@ -1,12 +1,10 @@
 const express = require('express');
 const app = express()
-const port = 5000;
+const port = process.env.PORT || 5000;
 const cors = require('cors');
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
-
-const secretKey = crypto.randomBytes(64).toString('hex');
+const stripe = require('stripe')(process.env.PAYMENT_SECRET_KEY)
 
 // Middleware part
 
@@ -245,8 +243,8 @@ async function run() {
             const email = req.params.email;
             const { id } = req.body;
             const query = { email: email };
-            const result = await usersCollection.updateOne(query, { $pull: {selectedClasses: new ObjectId(id)} });
-            console.log(result);
+            const result = await usersCollection.updateOne(query, { $pull: { selectedClasses: id } });
+            res.send(result);
         })
 
 
@@ -266,11 +264,12 @@ async function run() {
             res.send(result);
         })
 
-        app.get('/classes/:id', async (req, res) => {
+        app.get('/classes/all/:id', async (req, res) => {
             const id = req.params.id;
-            const filter = { _id: new ObjectId(id) };
-            const result = await classesCollection.findOne(filter);
-            res.send(result);
+            console.log(id);
+            // const filter = { _id: new ObjectId(id) };
+            // const result = await classesCollection.findOne(filter);
+            // res.send(result);
         })
 
         app.patch('/classes/update/:id', async (req, res) => {
@@ -302,7 +301,7 @@ async function run() {
             res.send(result);
         })
 
-        app.get('/classes/all/:email', verifyJWT, verifyInstructor, async (req, res) => {
+        app.get('/classes/instructor/all/:email', verifyJWT, verifyInstructor, async (req, res) => {
             const email = req.params.email;
             const filter = { instructorEmail: email };
             const result = await classesCollection.find(filter).toArray();
@@ -364,6 +363,32 @@ async function run() {
             const sort = { enrolledStudents: -1 };
             const result = await classesCollection.find(query).sort(sort).collation({ locale: "en_US", numericOrdering: true }).limit(6).toArray();
             res.send(result);
+        })
+
+        // Stripe part NEEDS Fixing
+
+        app.post('/create-payment-intent', verifyJWT, async (req, res) => {
+            const { price } = req.body;
+            const amount = parseInt(price * 100);
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: amount,
+                currency: 'usd',
+                payment_method_types: ['card']
+            });
+
+            res.send({
+                clientSecret: paymentIntent.client_secret
+            })
+        })
+
+        app.post('/payments', verifyJWT, async (req, res) => {
+            const payment = req.body;
+            const insertResult = await paymentCollection.insertOne(payment);
+
+            const query = { _id: { $in: payment.cartItems.map(id => new ObjectId(id)) } }
+            const deleteResult = await cartCollection.deleteMany(query)
+
+            res.send({ insertResult, deleteResult });
         })
 
         // Send a ping to confirm a successful connection
