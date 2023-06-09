@@ -226,6 +226,21 @@ async function run() {
             res.send(result);
         })
 
+        app.post('/classes', async (req, res) => {
+            const item = req.body;
+
+            const result = await classesCollection.insertOne(item);
+
+            res.send(result);
+        })
+
+        app.get('/classes/all/:email', verifyJWT, verifyInstructor, async (req, res) => {
+            const email = req.params.email;
+            const filter = { instructorEmail: email };
+            const result = await classesCollection.find(filter).toArray();
+            res.send(result);
+        })
+
         app.get('/classes/all', verifyJWT, verifyAdmin, async (req, res) => {
             const result = await classesCollection.find().toArray();
             res.send(result);
