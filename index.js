@@ -219,6 +219,13 @@ async function run() {
             res.send(result);
         })
 
+        app.get('/classes/feedback/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) };
+            const result = await classesCollection.findOne(filter);
+            res.send(result);
+        })
+
         app.get('/classes/all', verifyJWT, verifyAdmin, async (req, res) => {
             const result = await classesCollection.find().toArray();
             res.send(result);
@@ -246,6 +253,21 @@ async function run() {
             const updateDoc = {
                 $set: {
                     status: 'denied'
+                },
+            };
+
+            const result = await classesCollection.updateOne(filter, updateDoc);
+            res.send(result);
+
+        })
+
+        app.patch('/classes/feedback/:id', async (req, res) => {
+            const id = req.params.id;
+            const sentFeedback = req.body.feedback;
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: {
+                    feedback: sentFeedback
                 },
             };
 
