@@ -135,7 +135,7 @@ async function run() {
 
         app.patch('/users/admin/:id', async (req, res) => {
             const id = req.params.id;
-            console.log(id);
+            // console.log(id);
             const filter = { _id: new ObjectId(id) };
             const updateDoc = {
                 $set: {
@@ -165,7 +165,7 @@ async function run() {
 
         app.patch('/users/instructor/:id', async (req, res) => {
             const id = req.params.id;
-            console.log(id);
+            // console.log(id);
             const filter = { _id: new ObjectId(id) };
             const updateDoc = {
                 $set: {
@@ -209,6 +209,53 @@ async function run() {
 
         })
 
+        app.patch('/users/student/select/:email', async (req, res) => {
+            const email = req.params.email;
+            const { id } = req.body;
+
+            console.log(id);
+
+            const filter = { email: email };
+
+            const prevResult = await usersCollection.findOne(filter);
+
+            const classes = prevResult.selectedClasses;
+
+            let matchingClass = false;
+
+            if (classes)
+                matchingClass = classes.includes(id);
+
+            console.log(matchingClass);
+
+            if (matchingClass) {
+                return res.send({ error: true, message: "This class has already been selected" })
+            }
+
+            const updateDoc = {
+                $push: { selectedClasses: id }
+            };
+
+            const result = await usersCollection.updateOne(filter, updateDoc, { upsert: true });
+
+            res.send(result);
+        })
+
+        app.patch('/users/student/select/delete/:email', async (req, res) => {
+            const email = req.params.email;
+            const { id } = req.body;
+            const query = { email: email };
+            const result = await usersCollection.updateOne(query, { $pull: {selectedClasses: new ObjectId(id)} });
+            console.log(result);
+        })
+
+
+        app.get('/users/student/select/:email', async (req, res) => {
+            const email = req.params.email;
+            const filter = { email: email };
+            const result = await usersCollection.findOne(filter);
+            res.send(result.selectedClasses);
+        })
 
 
         // classes APIs
@@ -219,14 +266,7 @@ async function run() {
             res.send(result);
         })
 
-        app.get('/classes/feedback/:id', async (req, res) => {
-            const id = req.params.id;
-            const filter = { _id: new ObjectId(id) };
-            const result = await classesCollection.findOne(filter);
-            res.send(result);
-        })
-
-        app.get('/classes/update/:id', async (req, res) => {
+        app.get('/classes/:id', async (req, res) => {
             const id = req.params.id;
             const filter = { _id: new ObjectId(id) };
             const result = await classesCollection.findOne(filter);
@@ -276,7 +316,7 @@ async function run() {
 
         app.patch('/classes/approve/:id', async (req, res) => {
             const id = req.params.id;
-            console.log(id);
+            // console.log(id);
             const filter = { _id: new ObjectId(id) };
             const updateDoc = {
                 $set: {
@@ -291,7 +331,7 @@ async function run() {
 
         app.patch('/classes/deny/:id', async (req, res) => {
             const id = req.params.id;
-            console.log(id);
+            // console.log(id);
             const filter = { _id: new ObjectId(id) };
             const updateDoc = {
                 $set: {
