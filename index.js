@@ -226,6 +226,34 @@ async function run() {
             res.send(result);
         })
 
+        app.get('/classes/update/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) };
+            const result = await classesCollection.findOne(filter);
+            res.send(result);
+        })
+
+        app.patch('/classes/update/:id', async (req, res) => {
+            const id = req.params.id;
+            const newName = req.body.name;
+            const newImage = req.body.image;
+            const newTotalSeats = req.body.totalSeats;
+            const newPrice = req.body.price;
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: {
+                    name: newName,
+                    image: newImage,
+                    totalSeats: newTotalSeats,
+                    price: newPrice
+                },
+            };
+
+            const result = await classesCollection.updateOne(filter, updateDoc);
+            res.send(result);
+
+        })
+
         app.post('/classes', async (req, res) => {
             const item = req.body;
 
