@@ -78,6 +78,16 @@ async function run() {
             next();
         }
 
+        const verifyStudent = async (req, res, next) => {
+            const email = req.decoded.email;
+            const query = { email: email }
+            const user = await usersCollection.findOne(query);
+            if (user?.role !== 'student') {
+                return res.status(403).send({ error: true, message: 'forbidden message' });
+            }
+            next();
+        }
+
         app.post('/jwt', (req, res) => {
             const user = req.body;
             const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
@@ -87,7 +97,7 @@ async function run() {
 
         // user APIs
 
-        app.get('/users', async (req, res) => {
+        app.get('/users', verifyJWT, verifyAdmin, async (req, res) => {
             const result = await usersCollection.find().toArray();
             res.send(result);
         })
@@ -108,6 +118,8 @@ async function run() {
             res.send(result);
         })
 
+        // Admin parts
+
         app.get('/users/admin/:email', verifyJWT, async (req, res) => {
             const email = req.params.email;
 
@@ -118,19 +130,6 @@ async function run() {
             const query = { email: email }
             const user = await usersCollection.findOne(query);
             const result = { admin: user?.role === 'admin' }
-            res.send(result);
-        })
-
-        app.get('/users/instructor/:email', verifyJWT, async (req, res) => {
-            const email = req.params.email;
-
-            if (req.decoded.email !== email) {
-                res.send({ instructor: false })
-            }
-
-            const query = { email: email }
-            const user = await usersCollection.findOne(query);
-            const result = { instructor: user?.role === 'instructor' }
             res.send(result);
         })
 
@@ -149,6 +148,21 @@ async function run() {
 
         })
 
+        // Instructor parts
+
+        app.get('/users/instructor/:email', verifyJWT, async (req, res) => {
+            const email = req.params.email;
+
+            if (req.decoded.email !== email) {
+                res.send({ instructor: false })
+            }
+
+            const query = { email: email }
+            const user = await usersCollection.findOne(query);
+            const result = { instructor: user?.role === 'instructor' }
+            res.send(result);
+        })
+
         app.patch('/users/instructor/:id', async (req, res) => {
             const id = req.params.id;
             console.log(id);
@@ -164,10 +178,50 @@ async function run() {
 
         })
 
+        // Student parts
+
+        app.get('/users/student/:email', verifyJWT, async (req, res) => {
+            const email = req.params.email;
+
+            if (req.decoded.email !== email) {
+                res.send({ student: false })
+            }
+
+            const query = { email: email }
+            const user = await usersCollection.findOne(query);
+            const result = { student: user?.role === 'student' }
+            res.send(result);
+        })
+
+        app.patch('/users/student/:id', async (req, res) => {
+            const id = req.params.id;
+            console.log(id);
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: {
+                    role: 'student'
+                },
+            };
+
+            const result = await usersCollection.updateOne(filter, updateDoc);
+            res.send(result);
+
+        })
+
+        
+
         // classes APIs
 
         app.get('/classes', async (req, res) => {
-            const result = await classesCollection.find().toArray();
+            const query = { status: "approved" };
+            const result = await classesCollection.find(query).toArray();
+            res.send(result);
+        })
+
+        app.get('/classes/popular', async (req, res) => {
+            const query = { status: "approved" };
+            const sort = { enrolledStudents: -1 };
+            const result = await classesCollection.find(query).sort(sort).collation({ locale: "en_US", numericOrdering: true }).limit(6).toArray();
             res.send(result);
         })
 
