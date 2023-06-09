@@ -18,14 +18,14 @@ app.use(cors());
 const verifyJWT = (req, res, next) => {
     const authorization = req.headers.authorization;
     if (!authorization) {
-        return res.status(401).send({ error: true, message: 'unauthorized access' });
+        return res.status(401).send({ error: true, message: 'unauthorized access JWT' });
     }
     // bearer token
     const token = authorization.split(' ')[1];
 
     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
         if (err) {
-            return res.status(401).send({ error: true, message: 'unauthorized access' })
+            return res.status(401).send({ error: true, message: 'unauthorized access not Admin' })
         }
         req.decoded = decoded;
         next();
@@ -193,10 +193,11 @@ async function run() {
             res.send(result);
         })
 
-        app.patch('/users/student/:id', async (req, res) => {
-            const id = req.params.id;
-            console.log(id);
-            const filter = { _id: new ObjectId(id) };
+        app.patch('/users/student/:email', async (req, res) => {
+            const email = req.params.email;
+            // console.log(id);
+            console.log(email);
+            const filter = { email: email };
             const updateDoc = {
                 $set: {
                     role: 'student'
@@ -208,7 +209,7 @@ async function run() {
 
         })
 
-        
+
 
         // classes APIs
 
@@ -216,6 +217,41 @@ async function run() {
             const query = { status: "approved" };
             const result = await classesCollection.find(query).toArray();
             res.send(result);
+        })
+
+        app.get('/classes/all', verifyJWT, verifyAdmin, async (req, res) => {
+            const result = await classesCollection.find().toArray();
+            res.send(result);
+        })
+
+        app.patch('/classes/approve/:id', async (req, res) => {
+            const id = req.params.id;
+            console.log(id);
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: {
+                    status: 'approved'
+                },
+            };
+
+            const result = await classesCollection.updateOne(filter, updateDoc);
+            res.send(result);
+
+        })
+
+        app.patch('/classes/deny/:id', async (req, res) => {
+            const id = req.params.id;
+            console.log(id);
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: {
+                    status: 'denied'
+                },
+            };
+
+            const result = await classesCollection.updateOne(filter, updateDoc);
+            res.send(result);
+
         })
 
         app.get('/classes/popular', async (req, res) => {
