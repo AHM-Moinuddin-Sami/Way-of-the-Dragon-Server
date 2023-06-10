@@ -194,7 +194,7 @@ async function run() {
         app.patch('/users/student/:email', async (req, res) => {
             const email = req.params.email;
             // console.log(id);
-            console.log(email);
+            // console.log(email);
             const filter = { email: email };
             const updateDoc = {
                 $set: {
@@ -211,7 +211,7 @@ async function run() {
             const email = req.params.email;
             const { id } = req.body;
 
-            console.log(id);
+            // console.log(id);
 
             const filter = { email: email };
 
@@ -224,7 +224,7 @@ async function run() {
             if (classes)
                 matchingClass = classes.includes(id);
 
-            console.log(matchingClass);
+            // console.log(matchingClass);
 
             if (matchingClass) {
                 return res.send({ error: true, message: "This class has already been selected" })
@@ -266,10 +266,10 @@ async function run() {
 
         app.get('/classes/all/:id', async (req, res) => {
             const id = req.params.id;
-            console.log(id);
-            // const filter = { _id: new ObjectId(id) };
-            // const result = await classesCollection.findOne(filter);
-            // res.send(result);
+            // console.log(id);
+            const filter = { _id: new ObjectId(id) };
+            const result = await classesCollection.findOne(filter);
+            res.send(result);
         })
 
         app.patch('/classes/update/:id', async (req, res) => {
@@ -382,13 +382,40 @@ async function run() {
         })
 
         app.post('/payments', verifyJWT, async (req, res) => {
-            const payment = req.body;
-            const insertResult = await paymentCollection.insertOne(payment);
+            const { id, email } = req.body;
+            const query = { email: email };
+            console.log(email);
 
-            const query = { _id: { $in: payment.cartItems.map(id => new ObjectId(id)) } }
-            const deleteResult = await cartCollection.deleteMany(query)
+            const findResult = await usersCollection.findOne(query);
 
-            res.send({ insertResult, deleteResult });
+            const deleteDoc = {
+                $pull: { selectedClasses: id }
+            }
+
+            const deleteResult = await usersCollection.updateOne(query, deleteDoc);
+
+
+            if (findResult.enrolledClasses.includes(id)) {
+                return res.send({ error: true, message: "This class has already been selected" })
+            }
+
+            const insertDoc = {
+                $push: { enrolledClasses: id }
+            }
+
+            const updateDoc = {
+                $inc: { enrolledStudents: 1 }
+            }
+
+            const updateResult = await classesCollection.updateOne({ _id: new Object(id) }, updateDoc, { upsert: false })
+
+            console.log(updateResult)
+
+            const insertResult = await usersCollection.updateOne(query, insertDoc, { upsert: true });
+
+            console.log(insertResult);
+
+            res.send({ deleteResult, insertResult });
         })
 
         // Send a ping to confirm a successful connection
