@@ -53,6 +53,7 @@ async function run() {
 
         const usersCollection = database.collection("users");
         const classesCollection = database.collection("classes");
+        const paymentsCollection = database.collection("payments");
 
         // Admin verification & JWT
 
@@ -147,6 +148,19 @@ async function run() {
         })
 
         // Instructor parts
+
+        app.get('/instructors', async (req, res) => {
+
+            const query = { role: "instructor" }
+
+            const users = await usersCollection.find(query).toArray();
+
+            console.log(users);
+
+            // const result = { instructor: user?.role === 'instructor' }
+
+            res.send(users);
+        })
 
         app.get('/users/instructor/:email', verifyJWT, async (req, res) => {
             const email = req.params.email;
@@ -253,6 +267,13 @@ async function run() {
             const filter = { email: email };
             const result = await usersCollection.findOne(filter);
             res.send(result.selectedClasses);
+        })
+
+        app.get('/users/student/enrolled/:email', async (req, res) => {
+            const email = req.params.email;
+            const filter = { email: email };
+            const result = await usersCollection.findOne(filter);
+            res.send(result.enrolledClasses);
         })
 
 
@@ -381,12 +402,38 @@ async function run() {
             })
         })
 
-        app.post('/payments', verifyJWT, async (req, res) => {
+        app.post('/payments/check', verifyJWT, async (req, res) => {
             const { id, email } = req.body;
             const query = { email: email };
-            console.log(email);
+            const update = { $set: { enrolledClasses: [] } };
+            let newCreated = false;
 
-            const findResult = await usersCollection.findOne(query);
+            let findResult = await usersCollection.findOne(query);
+
+
+            if (findResult.enrolledClasses === undefined) {
+                findResult = await usersCollection.findOneAndUpdate(query, update, { upsert: true, returnDocument: 'after' });
+                newCreated = true;
+            }
+
+            console.log(findResult);
+
+            if (newCreated ? findResult.value.enrolledClasses.includes(id) : findResult.enrolledClasses.includes(id)) {
+                return res.send({ error: true, message: "Already enrolled in to this class." })
+            }
+
+            return res.send({ error: false, message: "User has been enrolled to this class" });
+
+        })
+
+
+        app.post('/payments', verifyJWT, async (req, res) => {
+            const { id, email, className, name, price, date, transactionId } = req.body;
+            const query = { email: email };
+
+            let findResult = await usersCollection.findOne(query);
+
+            // console.log(findResult.enrolledClasses);
 
             const deleteDoc = {
                 $pull: { selectedClasses: id }
@@ -394,29 +441,42 @@ async function run() {
 
             const deleteResult = await usersCollection.updateOne(query, deleteDoc);
 
-
-            if (findResult.enrolledClasses.includes(id)) {
-                return res.send({ error: true, message: "This class has already been selected" })
-            }
-
-            const insertDoc = {
+            const docInsertDoc = {
                 $push: { enrolledClasses: id }
             }
 
-            const updateDoc = {
+            const paymentInsertDoc = {
+                name: name,
+                className: className,
+                classId: id,
+                price: price,
+                date: date,
+                transactionId: transactionId,
+                studentEmail: email
+            }
+
+            const updateEnrolledDoc = {
                 $inc: { enrolledStudents: 1 }
             }
 
-            const updateResult = await classesCollection.updateOne({ _id: new Object(id) }, updateDoc, { upsert: false })
+            const updateResult = await classesCollection.updateOne({ _id: new ObjectId(id) }, updateEnrolledDoc, { upsert: false })
 
             console.log(updateResult)
 
-            const insertResult = await usersCollection.updateOne(query, insertDoc, { upsert: true });
+            const docInsertResult = await usersCollection.updateOne(query, docInsertDoc, { upsert: true });
 
-            console.log(insertResult);
+            const paymentInsertResult = await paymentsCollection.insertOne(paymentInsertDoc);
 
-            res.send({ deleteResult, insertResult });
+            console.log(docInsertResult);
+
+            console.log(paymentInsertResult)
+
+            res.send({ deleteResult, docInsertResult, paymentInsertResult });
         })
+
+
+
+
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
