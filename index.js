@@ -158,12 +158,12 @@ async function run() {
             res.send(users);
         })
 
-        // app.get('/classes/popular', async (req, res) => {
-        //     const query = { status: "approved" };
-        //     const sort = { enrolledStudents: -1 };
-        //     const result = await classesCollection.find().sort(sort).collation({ locale: "en_US", numericOrdering: true }).limit(6).toArray();
-        //     res.send(result);
-        // })
+        app.get('/instructors/popular', async (req, res) => {
+            const query = { role: "instructor" }
+            const sort = { numberOfStudents: -1 };
+            const result = await usersCollection.find(query).sort(sort).collation({ locale: "en_US", numericOrdering: true }).limit(6).toArray();
+            res.send(result);
+        })
 
         app.get('/users/instructor/:email', verifyJWT, async (req, res) => {
             const email = req.params.email;
