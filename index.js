@@ -134,7 +134,6 @@ async function run() {
 
         app.patch('/users/admin/:id', async (req, res) => {
             const id = req.params.id;
-            // console.log(id);
             const filter = { _id: new ObjectId(id) };
             const updateDoc = {
                 $set: {
@@ -180,7 +179,6 @@ async function run() {
 
         app.patch('/users/instructor/:id', async (req, res) => {
             const id = req.params.id;
-            // console.log(id);
             const filter = { _id: new ObjectId(id) };
             const updateDoc = {
                 $set: {
@@ -205,7 +203,6 @@ async function run() {
 
             const query = { email: email }
             const user = await usersCollection.findOne(query);
-            console.log(user);
             const result = { student: user?.role === 'student' }
             res.send(result);
         })
@@ -219,8 +216,6 @@ async function run() {
 
         app.patch('/users/student/:email', async (req, res) => {
             const email = req.params.email;
-            // console.log(id);
-            // console.log(email);
             const filter = { email: email };
             const updateDoc = {
                 $set: {
@@ -236,8 +231,6 @@ async function run() {
         app.patch('/users/student/select/:email', async (req, res) => {
             const email = req.params.email;
             const { id } = req.body;
-
-            // console.log(id);
 
             const filter = { email: email };
 
@@ -366,7 +359,6 @@ async function run() {
 
         app.patch('/classes/deny/:id', async (req, res) => {
             const id = req.params.id;
-            // console.log(id);
             const filter = { _id: new ObjectId(id) };
             const updateDoc = {
                 $set: {
@@ -431,8 +423,6 @@ async function run() {
                 newCreated = true;
             }
 
-            console.log(findResult);
-
             if (newCreated ? findResult.value.enrolledClasses.includes(id) : findResult.enrolledClasses.includes(id)) {
                 return res.send({ error: true, message: "Already enrolled in to this class." })
             }
@@ -451,8 +441,6 @@ async function run() {
             const instructorQuery = { name: instructorName };
 
             let findResult = await usersCollection.findOne(query);
-
-            // console.log(findResult.enrolledClasses);
 
             const deleteDoc = {
                 $pull: { selectedClasses: id }
@@ -486,17 +474,11 @@ async function run() {
 
             const updateResult = await classesCollection.updateOne({ _id: new ObjectId(id) }, updateEnrolledDoc, { upsert: false })
 
-            console.log(updateResult)
-
             const updateStudentNumberResult = await usersCollection.updateOne(instructorQuery, updateStudentNumDoc);
 
             const docInsertResult = await usersCollection.updateOne(query, docInsertDoc, { upsert: true });
 
             const paymentInsertResult = await paymentsCollection.insertOne(paymentInsertDoc);
-
-            console.log(docInsertResult);
-
-            console.log(paymentInsertResult)
 
             res.send({ deleteResult, docInsertResult, paymentInsertResult, updateStudentNumberResult });
         })
