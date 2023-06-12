@@ -155,12 +155,15 @@ async function run() {
 
             const users = await usersCollection.find(query).toArray();
 
-            console.log(users);
-
-            // const result = { instructor: user?.role === 'instructor' }
-
             res.send(users);
         })
+
+        // app.get('/classes/popular', async (req, res) => {
+        //     const query = { status: "approved" };
+        //     const sort = { enrolledStudents: -1 };
+        //     const result = await classesCollection.find().sort(sort).collation({ locale: "en_US", numericOrdering: true }).limit(6).toArray();
+        //     res.send(result);
+        // })
 
         app.get('/users/instructor/:email', verifyJWT, async (req, res) => {
             const email = req.params.email;
@@ -181,7 +184,8 @@ async function run() {
             const filter = { _id: new ObjectId(id) };
             const updateDoc = {
                 $set: {
-                    role: 'instructor'
+                    role: 'instructor',
+                    numberOfStudents: 0
                 },
             };
 
@@ -287,7 +291,6 @@ async function run() {
 
         app.get('/classes/all/:id', async (req, res) => {
             const id = req.params.id;
-            // console.log(id);
             const filter = { _id: new ObjectId(id) };
             const result = await classesCollection.findOne(filter);
             res.send(result);
@@ -336,7 +339,6 @@ async function run() {
 
         app.patch('/classes/approve/:id', async (req, res) => {
             const id = req.params.id;
-            // console.log(id);
             const filter = { _id: new ObjectId(id) };
             const updateDoc = {
                 $set: {
@@ -428,8 +430,12 @@ async function run() {
 
 
         app.post('/payments', verifyJWT, async (req, res) => {
-            const { id, email, className, name, price, date, transactionId } = req.body;
+
+            const { id, email, className, name, price, date, transactionId, instructorName } = req.body;
+
             const query = { email: email };
+
+            const instructorQuery = { name: instructorName };
 
             let findResult = await usersCollection.findOne(query);
 
@@ -459,9 +465,15 @@ async function run() {
                 $inc: { enrolledStudents: 1 }
             }
 
+            const updateStudentNumDoc = {
+                $inc: { numberOfStudents: 1 }
+            }
+
             const updateResult = await classesCollection.updateOne({ _id: new ObjectId(id) }, updateEnrolledDoc, { upsert: false })
 
             console.log(updateResult)
+
+            const updateStudentNumberResult = await usersCollection.updateOne(instructorQuery, updateStudentNumDoc);
 
             const docInsertResult = await usersCollection.updateOne(query, docInsertDoc, { upsert: true });
 
@@ -471,7 +483,7 @@ async function run() {
 
             console.log(paymentInsertResult)
 
-            res.send({ deleteResult, docInsertResult, paymentInsertResult });
+            res.send({ deleteResult, docInsertResult, paymentInsertResult, updateStudentNumberResult });
         })
 
 
