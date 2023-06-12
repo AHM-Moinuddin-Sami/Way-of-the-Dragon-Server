@@ -54,6 +54,7 @@ async function run() {
         const usersCollection = database.collection("users");
         const classesCollection = database.collection("classes");
         const paymentsCollection = database.collection("payments");
+        const newsSubsCollection = database.collection("newsSubs");
 
         // Admin verification & JWT
 
@@ -491,7 +492,20 @@ async function run() {
             res.send(result);
         })
 
+        // News Subscription APIs
 
+        app.post('/subscribe/:email', async (req, res) => {
+            const email = req.params.email;
+            const payload = { email: email }
+            const checkSubs = await newsSubsCollection.findOne(payload);
+
+            if (checkSubs)
+                return res.send({ error: true, message: "You are already subscribed!" });
+
+            const result = await newsSubsCollection.insertOne(payload);
+
+            res.send(result);
+        })
 
 
 
