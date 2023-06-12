@@ -401,7 +401,7 @@ async function run() {
             res.send(result);
         })
 
-        // Stripe part NEEDS Fixing
+        // Stripe part 
 
         app.post('/create-payment-intent', verifyJWT, async (req, res) => {
             const { price } = req.body;
@@ -444,7 +444,7 @@ async function run() {
 
         app.post('/payments', verifyJWT, async (req, res) => {
 
-            const { id, email, className, name, price, date, transactionId, instructorName } = req.body;
+            const { id, email, className, name, price, date, transactionId, instructorName, instructorEmail } = req.body;
 
             const query = { email: email };
 
@@ -471,7 +471,9 @@ async function run() {
                 price: price,
                 date: date,
                 transactionId: transactionId,
-                studentEmail: email
+                studentEmail: email,
+                instructorName: instructorName,
+                instructorEmail: instructorEmail
             }
 
             const updateEnrolledDoc = {
@@ -497,6 +499,14 @@ async function run() {
             console.log(paymentInsertResult)
 
             res.send({ deleteResult, docInsertResult, paymentInsertResult, updateStudentNumberResult });
+        })
+
+        app.get('/payments/history/:email', verifyJWT, async (req, res) => {
+            const email = req.params.email;
+            const query = { studentEmail: email };
+            const result = await paymentsCollection.find(query).toArray();
+            console.log(result);
+            res.send(result);
         })
 
 
