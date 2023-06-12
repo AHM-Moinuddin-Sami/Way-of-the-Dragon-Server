@@ -205,7 +205,15 @@ async function run() {
 
             const query = { email: email }
             const user = await usersCollection.findOne(query);
+            console.log(user);
             const result = { student: user?.role === 'student' }
+            res.send(result);
+        })
+
+        app.get('/users/student/all/:email', verifyJWT, async (req, res) => {
+            const email = req.params.email;
+            const query = { email: email }
+            const result = await usersCollection.findOne(query);
             res.send(result);
         })
 
@@ -235,18 +243,23 @@ async function run() {
 
             const prevResult = await usersCollection.findOne(filter);
 
-            const classes = prevResult.selectedClasses;
+            const selectedClasses = prevResult.selectedClasses;
+            const enrolledClasses = prevResult.enrolledClasses;
 
-            let matchingClass = false;
+            let matchingSelectedClass = false;
+            let matchingEnrolledClass = false;
 
-            if (classes)
-                matchingClass = classes.includes(id);
+            if (selectedClasses)
+                matchingSelectedClass = selectedClasses.includes(id);
 
-            // console.log(matchingClass);
-
-            if (matchingClass) {
-                return res.send({ error: true, message: "This class has already been selected" })
+            if (matchingSelectedClass) {
+                return res.send({ error: true, message: "This class has already been selected" });
             }
+            else if (enrolledClasses)
+                matchingEnrolledClass = enrolledClasses.includes(id);
+
+            if (matchingEnrolledClass)
+                return res.send({ error: true, message: "You have already enrolled into this class" });
 
             const updateDoc = {
                 $push: { selectedClasses: id }
